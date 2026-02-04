@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:polygone_app/models/chat_model.dart';
+import 'package:oreon/models/chat_model.dart';
 import '../models/nearby_contact_model.dart';
 
 class NearbyContactItem extends StatelessWidget {

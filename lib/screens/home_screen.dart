@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:polygone_app/screens/chat_screen.dart';
+import 'package:oreon/screens/chat_screen.dart';
 import 'nearby_contacts_screen.dart';
 import 'settings_screen.dart';
 
