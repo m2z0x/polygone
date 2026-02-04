@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:oreon/logic/picture.dart';
+import 'package:oreon/models/nearby_contact_model.dart';
 import 'package:oreon/providers/providers.dart';
-import 'dart:ui'; // For ImageFilter
+import 'dart:ui';
 import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -133,6 +134,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.phone_outlined,
                   title: 'Phone',
                   value: userProvider.userPhone,
+                ),
+
+                _buildSectionDivider(),
+                _buildInfoCard(
+                  icon: Icons.shape_line,
+                  title: 'Username',
+                  value: userProvider.userName,
+                ),
+
+                _buildSectionDivider(),
+                _buildInfoCard(
+                  icon: Icons.shape_line,
+                  title: 'Seed',
+                  value: userProvider.userSeed.isNotEmpty ? '${userProvider.userSeed.substring(0, 16)}...' : 'No seed set',
                 ),
                 _buildSectionDivider(),
                 _buildSectionHeader('QR Code'),

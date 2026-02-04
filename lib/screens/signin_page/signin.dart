@@ -20,6 +20,7 @@ class _SignInScreenState extends State<SignInScreen> {
   late TextEditingController _nameController;
   late TextEditingController _usernameController;
   late TextEditingController _phoneController;
+  late TextEditingController _userSeed;
   
   bool _isSignUp = false;
   bool _obscurePassword = true;
@@ -33,6 +34,7 @@ class _SignInScreenState extends State<SignInScreen> {
     _nameController = TextEditingController();
     _usernameController = TextEditingController();
     _phoneController = TextEditingController();
+    _userSeed = TextEditingController();
   }
 
   @override
@@ -42,6 +44,7 @@ class _SignInScreenState extends State<SignInScreen> {
     _nameController.dispose();
     _usernameController.dispose();
     _phoneController.dispose();
+    _userSeed.dispose();
     super.dispose();
   }
 
@@ -76,6 +79,7 @@ class _SignInScreenState extends State<SignInScreen> {
           bio: 'Welcome to Oreon',
           email: _emailController.text,
           phone: _phoneController.text,
+          seed: generateSha256Hash(_usernameController.text),
         );
 
         if (mounted && context.mounted) {
@@ -224,24 +228,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
 
                     const SizedBox(height: 24),
-
-                    // Forgot password (only for sign in)
-                    if (!_isSignUp)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: _isLoading ? null : () {
-                            _showSnackBar('Password reset link sent to your email');
-                          },
-                          child: const Text(
-                            'Forgot password?',
-                            style: TextStyle(
-                              color: Colors.teal,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
 
                     const SizedBox(height: 32),
 

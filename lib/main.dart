@@ -74,6 +74,7 @@ class OreonApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/profile': (context) => const ProfileScreen(),
+        '/signin': (context) => const SignInScreen(),
       },
     ),
     );

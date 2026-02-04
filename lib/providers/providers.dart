@@ -27,6 +27,8 @@ class UserProvider extends ChangeNotifier {
     _userEmail = prefs.getString('user_email') ?? 'user@example.com';
     _userPhone = prefs.getString('user_phone') ?? '+1234567890';
     _userSeed = prefs.getString('user_seed') ?? '';
+    String? avatarPath = prefs.getString('avatar_picture');
+    _avatarPicture = avatarPath != null && avatarPath.isNotEmpty ? File(avatarPath) : null;
     notifyListeners();
   }
 
@@ -37,7 +39,7 @@ class UserProvider extends ChangeNotifier {
     required String email,
     required String phone,
     String? avatarPicture,
-    
+    String? seed,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     
@@ -46,12 +48,13 @@ class UserProvider extends ChangeNotifier {
     _userEmail = email;
     _userPhone = phone;
     _avatarPicture = avatarPicture != null ? File(avatarPicture) : null;
-
+    _userSeed = seed ?? '';
     await prefs.setString('user_name', name);
     await prefs.setString('user_bio', bio);
     await prefs.setString('user_email', email);
     await prefs.setString('user_phone', phone);
     await prefs.setString('avatar_picture', _avatarPicture?.path ?? '');
+    await prefs.setString('user_seed', _userSeed);
     notifyListeners();
   }
 
@@ -74,6 +77,13 @@ class UserProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _avatarPicture = File(path);
     await prefs.setString('avatar_picture', path);
+    notifyListeners();
+  }
+
+  Future<void> updateSeed(String seed) async {
+    final prefs = await SharedPreferences.getInstance();
+    _userSeed = seed;
+    await prefs.setString('user_seed', seed);
     notifyListeners();
   }
 }

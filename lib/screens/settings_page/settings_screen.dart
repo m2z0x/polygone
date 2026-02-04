@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:oreon/main.dart';
 import 'package:oreon/providers/providers.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
@@ -92,24 +93,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSectionDivider(),
 
                 // Privacy & Security
-                _buildSectionHeader('Privacy & Security'),
+                _buildSectionHeader('Login '),
                 _buildNavigationTile(
-                  title: 'Privacy Policy',
-                  icon: Icons.privacy_tip_outlined,
-                  onTap: () => _showInfoDialog(
-                    context,
-                    'Privacy Policy',
-                    'Your privacy is our priority. All messages are end-to-end encrypted.',
-                  ),
+                  title: 'Logout',
+                  icon: Icons.logout,
+                  onTap: () async {
+                    Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
+                  },
                 ),
                 _buildNavigationTile(
-                  title: 'Security Settings',
-                  icon: Icons.shield_outlined,
-                  onTap: () => _showInfoDialog(
-                    context,
-                    'Security Settings',
-                    'Configure advanced security options for your account.',
-                  ),
+                  title: 'Delete Account',
+                  icon: Icons.delete_outline,
+                  onTap: () async {
+                    await prefs.clear();
+                    Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
+                  },
                 ),
 
                 _buildSectionDivider(),
@@ -146,19 +144,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildAppIcon() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
-      child: Image.asset(
-        'assets/oreon/res/mipmap-xxhdpi/oreon_adaptive_fore.png',
-        width: 36,
-        height: 36,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: Colors.teal.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(Icons.chat, color: Colors.white, size: 20),
+      child:   CircleAvatar(
+        backgroundColor: Colors.transparent,
+        radius: 28,
+        child: Image.asset(
+        'assets/logo/logo_white_wout.png',
+        width: 56,
+        height: 56,
         ),
       ),
     );
@@ -358,22 +350,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
+                        CircleAvatar(
+                          backgroundColor: Colors.transparent,
+                          radius: 28,
                           child: Image.asset(
-                            'assets/oreon/res/mipmap-xxhdpi/oreon_adaptive_fore.png',
-                            width: 56,
-                            height: 56,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              width: 56,
-                              height: 56,
-                              decoration: BoxDecoration(
-                                color: Colors.teal.withOpacity(0.4),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(Icons.chat, color: Colors.white, size: 32),
-                            ),
+                          'assets/logo/logo_white_wout.png',
+                          width: 56,
+                          height: 56,
                           ),
                         ),
                         const SizedBox(width: 18),
@@ -481,6 +464,14 @@ class _ProfileCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
+          Text(
+            userProvider.userSeed.isNotEmpty ? 'Seed: ${userProvider.userSeed.substring(0, 8)}...' : 'No seed set',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
           TextButton(
             onPressed: () {
               Navigator.pushNamed(context, '/profile');
