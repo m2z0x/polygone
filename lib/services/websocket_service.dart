@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:network_info_plus/network_info_plus.dart';
+import 'package:http/http.dart' as http;
 
 /// WebSocket service for handling nearby device scanning
 class WebSocketService {
@@ -78,6 +79,7 @@ class WebSocketService {
     } catch (e) {
       debugPrint('[WebSocket] Connection failed: $e');
       _isConnected = false;
+      onError?.call('Failed to connect: $e');
       onConnectionStateChanged?.call(false);
       _handleDisconnect();
     }

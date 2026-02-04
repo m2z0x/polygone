@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:oreon/providers/providers.dart';
+import 'package:oreon/screens/profile_page/profile_screen.dart';
+import 'package:oreon/screens/signin_page/signin.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'screens/home_page/home_screen.dart';
+import 'package:oreon/screens/home_page/home_screen.dart';
+import 'package:oreon/screens/settings_page/settings_screen.dart';
 
 late SharedPreferences prefs; // Global access after init
 
@@ -23,7 +28,14 @@ class OreonApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return 
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+      ],
+      child:
+    MaterialApp(
       title: 'Oreon',
       home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
@@ -58,6 +70,12 @@ class OreonApp extends StatelessWidget {
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         ),
       ),
+      routes: {
+        '/home': (context) => const HomeScreen(),
+        '/settings': (context) => const SettingsScreen(),
+        '/profile': (context) => const ProfileScreen(),
+      },
+    ),
     );
   }
 }

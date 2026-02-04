@@ -2,10 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // for HapticFeedback (Android vibration)
+import 'package:flutter/services.dart';
 import 'package:oreon/screens/chat_page/chat_screen.dart';
-// Adjust import path to your ChatScreen
-// ignore: depend_on_referenced_packages
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class StableNearbyContactsScreen extends StatefulWidget {
@@ -26,7 +24,8 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
 
-  static const String _wsUrl = 'ws://192.168.1.103:8080/ws/nearby';
+  // Use localhost for emulator, 10.0.0.2 for physical device connected to same network
+  static const String _wsUrl = 'ws://10.0.0.2:8000/ws/nearby';
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
@@ -40,7 +39,7 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
     super.initState();
     _radarController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 4),
     );
     _searchController.addListener(_onSearchChanged);
   }
@@ -56,7 +55,7 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
 
   void _onSearchChanged() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), _filterContacts);
+    _debounce = Timer(const Duration(milliseconds: 300), _filterContacts);
   }
 
   void _startScanning() {
@@ -80,10 +79,8 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
 
     try {
       final uri = Uri.parse(_wsUrl);
-      // ─── This is the recommended way ───
       _channel = WebSocketChannel.connect(uri);
 
-      // Send start command to your Kotlin backend
       _channel!.sink.add(jsonEncode({
         "action": "start_scan",
         "userId": "android_user_${DateTime.now().millisecondsSinceEpoch}",
@@ -131,7 +128,6 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
                   }
                 });
 
-                // Optional: vibrate on very close contact (Android)
                 if (distance < 20) {
                   HapticFeedback.lightImpact();
                 }
@@ -144,7 +140,7 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
               case 'error':
                 final msg = decoded['message'] as String? ?? 'Scan error';
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                  _showSnackBar(msg, isError: true);
                 }
                 _stopScanning();
                 break;
@@ -191,9 +187,7 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
     } else if (_isScanning) {
       _stopScanning();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Connection lost. Tap radar to retry.')),
-        );
+        _showSnackBar('Connection lost. Tap radar to retry.', isError: true);
       }
     }
   }
@@ -208,6 +202,7 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
     _reconnectTimer?.cancel();
 
     _radarController.stop();
+    _radarController.reset();
 
     if (mounted) {
       setState(() {
@@ -216,20 +211,47 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
       });
 
       if (auto) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Scan finished'),
-            backgroundColor: Colors.teal.withOpacity(0.9),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        _showSnackBar('Scan finished • Found ${_nearbyContacts.length} contacts');
       }
     }
   }
 
-  void _toggleScanning() => _isScanning ? _stopScanning() : _startScanning();
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontSize: 15),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isError 
+            ? Colors.red.withOpacity(0.9) 
+            : Colors.teal.withOpacity(0.9),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _toggleScanning() {
+    HapticFeedback.mediumImpact();
+    _isScanning ? _stopScanning() : _startScanning();
+  }
 
   String _formatDistance(double meters) {
     if (meters < 1000) return '${meters.toStringAsFixed(0)} m';
@@ -265,51 +287,71 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
     return switch (strength) {
       'strong' => Icons.wifi_rounded,
       'medium' => Icons.wifi_2_bar_rounded,
-      _ => Icons.wifi_off_rounded,
+      _ => Icons.wifi_1_bar_rounded,
     };
   }
 
   Color _getSignalColor(String strength) {
     return switch (strength) {
-      'strong' => Colors.greenAccent,
-      'medium' => Colors.orangeAccent,
-      _ => Colors.redAccent,
+      'strong' => const Color(0xFF4CAF50),
+      'medium' => const Color(0xFFFFA726),
+      _ => const Color(0xFFEF5350),
     };
   }
 
   String _getTimeAgo(DateTime time) {
     final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    if (diff.inSeconds < 10) return 'now';
+    if (diff.inMinutes < 1) return '${diff.inSeconds}s';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0C12),
+      backgroundColor: const Color(0xFF0D0F14),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Nearby', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 26)),
+        title: const Text(
+          'Nearby',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 26,
+            color: Colors.white,
+          ),
+        ),
         actions: [
           if (_isConnecting)
-            const Padding(
-              padding: EdgeInsets.only(right: 20),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
               child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2.8, valueColor: AlwaysStoppedAnimation(Colors.tealAccent)),
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation(Colors.tealAccent.withOpacity(0.8)),
+                ),
               ),
             ),
           IconButton(
-            icon: Icon(
-              _isScanning ? Icons.stop_circle_rounded : Icons.radar_rounded,
-              color: _isScanning ? Colors.redAccent : Colors.tealAccent,
-              size: 36,
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) {
+                return ScaleTransition(scale: animation, child: child);
+              },
+              child: Icon(
+                _isScanning ? Icons.stop_circle_rounded : Icons.radar_rounded,
+                key: ValueKey(_isScanning),
+                color: _isScanning ? Colors.redAccent : Colors.tealAccent,
+                size: 32,
+              ),
             ),
             onPressed: _toggleScanning,
+            tooltip: _isScanning ? 'Stop Scanning' : 'Start Scanning',
           ),
           const SizedBox(width: 8),
         ],
@@ -323,17 +365,21 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
           _startScanning();
         },
         color: Colors.tealAccent,
-        backgroundColor: Colors.black87,
+        backgroundColor: const Color(0xFF1A1D24),
+        strokeWidth: 3,
         child: Stack(
           children: [
-            const _StaticBackgroundGlow(),
+            const RepaintBoundary(child: _StaticBackgroundGlow()),
             SafeArea(
               child: Column(
                 children: [
+                  const SizedBox(height: 8),
                   _buildStatusCard(),
-                  _buildSearchBar(),
+                  if (_nearbyContacts.isNotEmpty) _buildSearchBar(),
                   Expanded(
-                    child: _filteredContacts.isEmpty ? _buildEmptyState() : _buildContactList(),
+                    child: _filteredContacts.isEmpty 
+                        ? _buildEmptyState() 
+                        : _buildContactList(),
                   ),
                 ],
               ),
@@ -349,33 +395,53 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(_isScanning ? 0.11 : 0.05),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.13)),
+        color: Colors.white.withOpacity(_isScanning ? 0.08 : 0.04),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withOpacity(_isScanning ? 0.15 : 0.08),
+          width: 1.5,
+        ),
         boxShadow: _isScanning
-            ? [BoxShadow(color: Colors.tealAccent.withOpacity(0.28), blurRadius: 28, spreadRadius: 2)]
+            ? [
+                BoxShadow(
+                  color: Colors.tealAccent.withOpacity(0.15),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                )
+              ]
             : null,
       ),
       child: Row(
         children: [
           SizedBox(
-            width: 90,
-            height: 90,
-            child: CustomPaint(
-              painter: RadarPainter(_radarController, _isScanning),
-              child: Center(
-                child: Container(
-                  width: 16,
-                  height: 16,
+            width: 80,
+            height: 80,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: const Size(80, 80),
+                  painter: RadarPainter(_radarController, _isScanning),
+                ),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 14,
+                  height: 14,
                   decoration: BoxDecoration(
                     color: _isScanning ? Colors.tealAccent : Colors.grey[600],
                     shape: BoxShape.circle,
                     boxShadow: _isScanning
-                        ? [BoxShadow(color: Colors.tealAccent.withOpacity(0.8), blurRadius: 16)]
+                        ? [
+                            BoxShadow(
+                              color: Colors.tealAccent.withOpacity(0.6),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            )
+                          ]
                         : null,
                   ),
                 ),
-              ),
+              ],
             ),
           ),
           const SizedBox(width: 20),
@@ -383,22 +449,37 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _isScanning
-                      ? "Scanning..."
-                      : _isConnecting
-                          ? "Connecting..."
-                          : "Paused",
-                  style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    _isScanning
+                        ? "Scanning..."
+                        : _isConnecting
+                            ? "Connecting..."
+                            : "Ready",
+                    key: ValueKey(_isScanning),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  _isScanning
-                      ? "Discovering nearby Oreon users"
-                      : _isConnecting
-                          ? "Trying to reconnect..."
-                          : "Tap radar to start discovery",
-                  style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 15),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Text(
+                    _isScanning
+                        ? "${_nearbyContacts.length} contacts found"
+                        : _isConnecting
+                            ? "Establishing connection..."
+                            : "Tap radar to discover",
+                    key: ValueKey('$_isScanning-${_nearbyContacts.length}'),
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.65),
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -413,26 +494,35 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: TextField(
         controller: _searchController,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: Colors.white, fontSize: 16),
         decoration: InputDecoration(
-          hintText: 'Search names...',
-          hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-          prefixIcon: const Icon(Icons.search_rounded, color: Colors.white60),
+          hintText: 'Search by name...',
+          hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+          prefixIcon: Icon(Icons.search_rounded, color: Colors.tealAccent.withOpacity(0.7)),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear_rounded, color: Colors.white70),
+                  icon: const Icon(Icons.clear_rounded, color: Colors.white60),
                   onPressed: () {
                     _searchController.clear();
+                    HapticFeedback.lightImpact();
                   },
                 )
               : null,
           filled: true,
-          fillColor: Colors.white.withOpacity(0.08),
+          fillColor: Colors.white.withOpacity(0.06),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(20),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.tealAccent.withOpacity(0.5), width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );
@@ -441,67 +531,128 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
   Widget _buildContactList() {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      physics: const BouncingScrollPhysics(),
       itemCount: _filteredContacts.length,
       itemBuilder: (context, index) {
         final contact = _filteredContacts[index];
         final avatarUrl = contact['avatarUrl'] as String?;
         final timeAgo = _getTimeAgo(contact['timestamp'] as DateTime);
+        final strength = contact['strength'] as String;
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 14),
-          color: Colors.white.withOpacity(0.06),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            leading: CircleAvatar(
-              radius: 34,
-              backgroundColor: Colors.teal.withOpacity(0.3),
-              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-              child: avatarUrl == null
-                  ? Text(
-                      (contact['name'] as String)[0].toUpperCase(),
-                      style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
-                    )
-                  : null,
-            ),
-            title: Text(
-              contact['name'] as String,
-              style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w600),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    _getSignalIcon(contact['strength'] as String),
-                    size: 20,
-                    color: _getSignalColor(contact['strength'] as String),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatsScreen(
+                      userId: contact['id'] as String,
+                      avatarUrl: avatarUrl,
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    "${contact['dist']} • ${contact['type']}",
-                    style: TextStyle(color: Colors.tealAccent.withOpacity(0.9), fontSize: 15),
+                );
+              },
+              splashColor: Colors.tealAccent.withOpacity(0.1),
+              highlightColor: Colors.tealAccent.withOpacity(0.05),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  leading: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.teal.withOpacity(0.3),
+                        backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                            ? NetworkImage(avatarUrl)
+                            : null,
+                        child: avatarUrl == null || avatarUrl.isEmpty
+                            ? Text(
+                                (contact['name'] as String)[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: _getSignalColor(strength),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF0D0F14),
+                              width: 2,
+                            ),
+                          ),
+                          child: Icon(
+                            _getSignalIcon(strength),
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  Text(
-                    timeAgo,
-                    style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 13),
+                  title: Text(
+                    contact['name'] as String,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ],
-              ),
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 30),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatsScreen(
-                    userId: contact['id'] as String,
-                    avatarUrl: avatarUrl,
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 16,
+                          color: Colors.tealAccent.withOpacity(0.7),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          "${contact['dist']} • ${contact['type']}",
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 14,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          timeAgo,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.4),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.white.withOpacity(0.3),
+                    size: 28,
                   ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
         );
       },
@@ -515,34 +666,60 @@ class _StableNearbyContactsScreenState extends State<StableNearbyContactsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              _isScanning ? Icons.radar_rounded : Icons.location_disabled_rounded,
-              size: 120,
-              color: Colors.white.withOpacity(0.15),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: Icon(
+                _isScanning
+                    ? Icons.radar_rounded
+                    : _isConnecting
+                        ? Icons.sync_rounded
+                        : _searchController.text.trim().isEmpty
+                            ? Icons.people_outline_rounded
+                            : Icons.search_off_rounded,
+                key: ValueKey('$_isScanning-$_isConnecting-${_searchController.text}'),
+                size: 100,
+                color: Colors.white.withOpacity(0.15),
+              ),
             ),
             const SizedBox(height: 32),
-            Text(
-              _isScanning
-                  ? "Looking for nearby users..."
-                  : _isConnecting
-                      ? "Connecting..."
-                      : _searchController.text.trim().isEmpty
-                          ? "No one nearby"
-                          : "No matches",
-              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                _isScanning
+                    ? "Searching nearby..."
+                    : _isConnecting
+                        ? "Connecting..."
+                        : _searchController.text.trim().isEmpty
+                            ? "No contacts yet"
+                            : "No matches found",
+                key: ValueKey('$_isScanning-$_isConnecting-${_searchController.text}'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              _isScanning
-                  ? "Stay in the area for best results"
-                  : _isConnecting
-                      ? "Retrying connection..."
-                      : _searchController.text.trim().isEmpty
-                          ? "Pull down or tap radar to scan"
-                          : "Try a different name",
-              style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 16, height: 1.4),
-              textAlign: TextAlign.center,
+            const SizedBox(height: 12),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                _isScanning
+                    ? "Stay in the area for best results"
+                    : _isConnecting
+                        ? "Please wait while we connect..."
+                        : _searchController.text.trim().isEmpty
+                            ? "Pull to refresh or tap the radar\nto start discovering"
+                            : "Try searching for a different name",
+                key: ValueKey('desc-$_isScanning-$_isConnecting-${_searchController.text}'),
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.55),
+                  fontSize: 15,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
@@ -559,40 +736,59 @@ class RadarPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = size.width / 2 - 8;
+
+    // Draw static rings
+    final ringPaint = Paint()
+      ..color = Colors.tealAccent.withOpacity(isScanning ? 0.15 : 0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    canvas.drawCircle(center, maxRadius * 0.35, ringPaint);
+    canvas.drawCircle(center, maxRadius * 0.65, ringPaint);
+    canvas.drawCircle(center, maxRadius * 0.90, ringPaint);
+
     if (!isScanning) return;
 
-    final center = Offset(size.width / 2, size.height / 2);
-    final maxRadius = size.width / 2 - 12;
-
-    final ringPaint = Paint()
-      ..color = Colors.tealAccent.withOpacity(0.18)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6;
-
-    canvas.drawCircle(center, maxRadius * 0.3, ringPaint);
-    canvas.drawCircle(center, maxRadius * 0.65, ringPaint);
-    canvas.drawCircle(center, maxRadius * 0.92, ringPaint);
-
+    // Animated sweep
     final sweepPaint = Paint()
       ..shader = RadialGradient(
-        colors: [Colors.tealAccent.withOpacity(0.6), Colors.transparent],
-        stops: const [0.0, 0.75],
+        colors: [
+          Colors.tealAccent.withOpacity(0.5),
+          Colors.tealAccent.withOpacity(0.2),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.5, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: maxRadius))
+      ..style = PaintingStyle.fill;
+
+    final sweepPath = Path()
+      ..moveTo(center.dx, center.dy)
+      ..arcTo(
+        Rect.fromCircle(center: center, radius: maxRadius),
+        -1.57 + (animation.value * 6.28),
+        1.2,
+        false,
+      )
+      ..close();
+
+    canvas.drawPath(sweepPath, sweepPaint);
+
+    // Pulse effect
+    final pulsePaint = Paint()
+      ..color = Colors.tealAccent.withOpacity(0.3 * (1 - animation.value))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 5.5;
+      ..strokeWidth = 3;
 
-    canvas.drawCircle(center, maxRadius * animation.value, sweepPaint);
-
-    final fadePaint = Paint()
-      ..color = Colors.tealAccent.withOpacity(0.4 - animation.value * 0.4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 8;
-
-    canvas.drawCircle(center, maxRadius * 0.88 * animation.value, fadePaint);
+    canvas.drawCircle(center, maxRadius * 0.85 * animation.value, pulsePaint);
   }
 
   @override
-  bool shouldRepaint(covariant RadarPainter old) => isScanning || animation.value != old.animation.value;
+  bool shouldRepaint(covariant RadarPainter oldDelegate) {
+    return isScanning != oldDelegate.isScanning || 
+           animation.value != oldDelegate.animation.value;
+  }
 }
 
 class _StaticBackgroundGlow extends StatelessWidget {
@@ -601,16 +797,21 @@ class _StaticBackgroundGlow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: -220,
-      left: -220,
-      child: Container(
-        width: 700,
-        height: 700,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [Colors.teal.withOpacity(0.08), Colors.transparent],
-            stops: const [0.0, 0.8],
+      top: -200,
+      left: -200,
+      child: IgnorePointer(
+        child: Container(
+          width: 600,
+          height: 600,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                Colors.teal.withOpacity(0.08),
+                Colors.transparent,
+              ],
+              stops: const [0.0, 0.75],
+            ),
           ),
         ),
       ),

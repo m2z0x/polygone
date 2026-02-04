@@ -36,8 +36,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 5;
 
-  // Change this to your actual WebSocket URL
-  static const String _wsUrl = 'ws://10.0.0.1:8080/ws/chat';
+  // Use localhost for emulator, 10.0.0.2 for physical device connected to same network
+  static const String _wsUrl = 'ws://10.0.0.2:8000/ws/chat';
 
   // Animation for typing indicator
   late AnimationController _typingAnimController;

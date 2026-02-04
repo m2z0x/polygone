@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:oreon/screens/chat_page/chat_screen.dart';
 import '../nerby_page/nearby_contacts_screen.dart';
-import '../setting_page/settings_screen.dart';
+import '../settings_page/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,20 +14,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  static const List<Widget> _screens = [
-    ChatsScreen(),
-    StableNearbyContactsScreen(),
-    SettingsScreen(),
+  // Lazy initialization - screens created only when needed
+  late final List<Widget> _screens = [
+    const ChatsScreen(),
+    const StableNearbyContactsScreen(),
+    const SettingsScreen(),
   ];
 
-  bool get _showFab => _currentIndex == 0 || _currentIndex == 1;
-  IconData get _fabIcon => _currentIndex == 0 ? Icons.edit : Icons.radar;
-
-
   void _onTabChanged(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+    if (_currentIndex != index) {
+      setState(() {
+        _currentIndex = index;
+      });
+    }
   }
 
   @override
@@ -43,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IndexedStack(
             index: _currentIndex,
-            children: _screens.map((screen) => KeyedSubtree(key: ValueKey(screen.runtimeType), child: screen)).toList(),
+            children: _screens,
           ),
         ],
       ),
@@ -71,7 +70,16 @@ class _CompactGlassmorphicBottomNav extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: 70, // Smaller, compact height
+          height: 70,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.2),
+            border: Border(
+              top: BorderSide(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+          ),
           child: BottomNavigationBar(
             currentIndex: currentIndex,
             onTap: onTabChanged,
@@ -81,23 +89,23 @@ class _CompactGlassmorphicBottomNav extends StatelessWidget {
             showSelectedLabels: false,
             showUnselectedLabels: false,
             selectedItemColor: Colors.tealAccent,
-            unselectedItemColor: Colors.white.withOpacity(0.6),
+            unselectedItemColor: const Color(0x99FFFFFF), // Pre-computed opacity
             iconSize: 28,
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.chat_bubble_outline),
                 activeIcon: Icon(Icons.chat_bubble),
-                label: 'Chats', // Label still required but hidden
+                label: '',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.radar_outlined),
                 activeIcon: Icon(Icons.radar),
-                label: 'Spot',
+                label: '',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.settings_outlined),
                 activeIcon: Icon(Icons.settings),
-                label: 'Settings',
+                label: '',
               ),
             ],
           ),
@@ -112,21 +120,23 @@ class _StaticBackgroundGlow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Positioned(
+    return Positioned(
       top: -150,
       left: -150,
-      child: SizedBox(
-        width: 500,
-        height: 500,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [
-                Colors.teal,
-                Colors.transparent,
-              ],
-              stops: [0.0, 0.7],
+      child: IgnorePointer(
+        child: SizedBox(
+          width: 500,
+          height: 500,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: const [
+                  Color(0xFF009688), // teal color code
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.7],
+              ),
             ),
           ),
         ),
