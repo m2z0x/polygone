@@ -7,6 +7,7 @@ class UserProvider extends ChangeNotifier {
   String _userName = 'User Name';
   String _userBio = 'No bio yet';
   String _userEmail = 'user@example.com';
+  String _userUsername = 'User';
   String _userPhone = '+1234567890';
   String _userSeed = '';
   File ? _avatarPicture;
@@ -15,6 +16,7 @@ class UserProvider extends ChangeNotifier {
   String get userName => _userName;
   String get userBio => _userBio;
   String get userEmail => _userEmail;
+  String get userUsername => _userUsername;
   String get userPhone => _userPhone;
   String get userSeed => _userSeed;
   File ? get avatarPicture => _avatarPicture;
@@ -22,8 +24,9 @@ class UserProvider extends ChangeNotifier {
   // Load data from SharedPreferences
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    _userName = prefs.getString('user_name') ?? 'User Name';
+    _userName = prefs.getString('name') ?? 'User Name';
     _userBio = prefs.getString('user_bio') ?? 'No bio yet';
+    _userUsername = prefs.getString('username') ?? 'User';
     _userEmail = prefs.getString('user_email') ?? 'user@example.com';
     _userPhone = prefs.getString('user_phone') ?? '+1234567890';
     _userSeed = prefs.getString('user_seed') ?? '';
@@ -37,6 +40,7 @@ class UserProvider extends ChangeNotifier {
     required String name,
     required String bio,
     required String email,
+    required String username,
     required String phone,
     String? avatarPicture,
     String? seed,
@@ -47,14 +51,18 @@ class UserProvider extends ChangeNotifier {
     _userBio = bio;
     _userEmail = email;
     _userPhone = phone;
+    _userUsername = username;
     _avatarPicture = avatarPicture != null ? File(avatarPicture) : null;
     _userSeed = seed ?? '';
-    await prefs.setString('user_name', name);
+
+    await prefs.setString('name', name);
     await prefs.setString('user_bio', bio);
     await prefs.setString('user_email', email);
+    await prefs.setString('username', username);
     await prefs.setString('user_phone', phone);
     await prefs.setString('avatar_picture', _avatarPicture?.path ?? '');
     await prefs.setString('user_seed', _userSeed);
+
     notifyListeners();
   }
 
@@ -62,7 +70,7 @@ class UserProvider extends ChangeNotifier {
   Future<void> updateUserName(String name) async {
     final prefs = await SharedPreferences.getInstance();
     _userName = name;
-    await prefs.setString('user_name', name);
+    await prefs.setString('name', name);
     notifyListeners();
   }
 

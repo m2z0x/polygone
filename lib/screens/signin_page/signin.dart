@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:oreon/main.dart';
 import 'package:oreon/providers/providers.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert'; // for utf8.encode
@@ -66,10 +67,17 @@ class _SignInScreenState extends State<SignInScreen> {
       await Future.delayed(const Duration(seconds: 2));
 
       // Update user provider with sign-in data
-      if(_isSignUp && _nameController.text.isEmpty) {
-        _showSnackBar('Please enter your name for sign up');
+      if(_isSignUp && (_nameController.text.isEmpty || _emailController.text.isEmpty || _phoneController.text.isEmpty)) {
+        _showSnackBar('Please fill in all fields for sign up');
         setState(() => _isLoading = false);
         return;
+      }
+      if(!_isSignUp) {
+        if(_usernameController.text != prefs.getString('username') || _passwordController.text != prefs.getString('password').toString()) {
+          _showSnackBar('Invalid username or password');
+          setState(() => _isLoading = false);
+          return;
+        }
       }
 
       if (mounted && context.mounted) {
@@ -77,6 +85,7 @@ class _SignInScreenState extends State<SignInScreen> {
         await userProvider.updateUserData(
           name: _isSignUp ? _nameController.text : 'User',
           bio: 'Welcome to Oreon',
+          username: _usernameController.text,
           email: _emailController.text,
           phone: _phoneController.text,
           seed: generateSha256Hash(_usernameController.text),
