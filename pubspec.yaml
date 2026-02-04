@@ -1,4 +1,4 @@
-name: polygone_app
+name: oreon
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -35,7 +35,14 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   lucide_icons_flutter: ^3.1.6
-  hive_flutter: ^1.1.0
+  shared_preferences: ^2.5.4
+  lucide_icons: ^0.257.0
+  web_socket_channel: ^3.0.3
+  flutter_launcher_icons: ^0.13.1
+
+  # Optional but recommended
+  provider: ^6.1.1  # For state management
+  sqflite: ^2.3.0   # For local message storage
 
 dev_dependencies:
   flutter_test:
@@ -75,6 +82,18 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "./assets/logo/logo.png"  # Ensure this is a 1024x1024 PNG
+  adaptive_icon_background: "#ffffff"  # White background for Android adaptive icons
+  adaptive_icon_foreground: "assets/oreon/res/mipmap-xxhdpi/oreon_adaptive_fore.png"  # Foreground (your logo, ideally with transparency)
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
+  assets:
+    - ./assets/logo/logo.png  # Fixed the old incorrect entry
   fonts:
     - family: Roboto
       fonts:
@@ -96,11 +115,3 @@ flutter:
           weight: 800
         - asset: fonts/Roboto/static/Roboto-Black.ttf
           weight: 900
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
-  #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package

@@ -1,1 +1,0 @@
- /home/dxtr0x/Desktop/polygone_app/.dart_tool/flutter_build/b7ffd4ca12af978d51fab977dfd2312d/native_assets.json: 
