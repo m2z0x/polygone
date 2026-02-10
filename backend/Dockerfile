@@ -43,10 +43,10 @@ COPY . .
 
 # Create data directories and set proper permissions
 RUN mkdir -p /app/data /app/instance /app/uploads && \
-    touch /app/livestock.db && \
-    chown -R appuser:appuser /app/data /app/instance /app/uploads /app/livestock.db && \
+    touch /app/oreon.db && \
+    chown -R appuser:appuser /app/data /app/instance /app/uploads /app/oreon.db && \
     chmod -R 755 /app/data /app/instance /app/uploads && \
-    chmod 664 /app/livestock.db
+    chmod 664 /app/oreon.db
 
 # Switch to the non-privileged user to run the application.
 USER appuser

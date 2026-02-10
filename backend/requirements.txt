@@ -49,8 +49,7 @@ SQLite3-0611
 starlette            
 typing_extensions    
 typing-inspection    
-uvicorn              
-uvloop               
+uvicorn                             
 watchfiles           
 websockets           
 Werkzeug

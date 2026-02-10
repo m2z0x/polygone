@@ -5,12 +5,12 @@ load_dotenv()
 
 class Config:
     # Database
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./db/polygonedb.db")
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./db/oreon.db")
     
     # API Settings
-    API_TITLE = "Polygone App API"
+    API_TITLE = "Oreon App API"
     API_VERSION = "1.0.0"
-    API_DESCRIPTION = "Complete API for Polygone App with Authentication"
+    API_DESCRIPTION = "Complete API for Oreon App with Authentication"
     
     # Security & JWT
     SECRET_KEY = os.getenv("SECRET_KEY", "*THt![\^WBHzd'X2xCq2+x{Qh%T474`P;T[hnqf?:X2=2s?%D8")

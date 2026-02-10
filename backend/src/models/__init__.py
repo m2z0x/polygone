@@ -8,8 +8,3 @@ __all__ = [
     'ChatRoomMember'
 ]
 
-try:
-    __all__.extend(['Conversation', 'Message'])
-except ImportError:
-    pass
-

@@ -12,7 +12,7 @@ from src.database import init_db
 from src.routes.auth import router as auth_router, user_router
 from src.routes.api import router as api_router
 
-def create_app() -> FastAPI:
+def oreon() -> FastAPI:
     """
     Initializes and configures the FastAPI application.
     """
@@ -50,7 +50,7 @@ def create_app() -> FastAPI:
     # Resulting path: /api/v1/users/search
     app.include_router(user_router, prefix="/api/v1")  
     
-    # Resulting path: /api/v1/ livestock or other business logic
+    # Resulting path: /api/v1/ oreon or other business logic
     app.include_router(api_router, prefix="/api/v1")
 
     # --- Root Endpoint ---
@@ -58,7 +58,7 @@ def create_app() -> FastAPI:
     async def root():
         return {
             "status": "online",
-            "message": "Welcome to Livestock Management System API",
+            "message": "Welcome to Oreon System API",
             "version": Config.API_VERSION,
             "docs": "/docs",
             "redoc": "/redoc"
@@ -67,4 +67,4 @@ def create_app() -> FastAPI:
     return app
 
 # Instantiate the app for Uvicorn
-app = create_app()
+app = oreon()

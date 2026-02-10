@@ -1,8 +1,8 @@
+from src import oreon
 import uvicorn
 from config import Config
-from src.services import polygone
 
-app = polygone()
+app = oreon()
 
 if __name__ == "__main__":
     uvicorn.run(
