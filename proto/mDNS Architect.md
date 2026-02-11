@@ -110,6 +110,7 @@ class LanController {
 
   Future<void> connect(LanDevice device);
   void sendMessage(LanDevice device, String message);
+  
 }
 ```
 
